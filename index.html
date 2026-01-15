@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ESP32 IoT Dashboard</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body { 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    padding: 20px;
+    min-height: 100vh;
+    color: #e0e0e0;
+  }
+
+  h1 { 
+    text-align: center;
+    color: #f5f5f5;
+    font-size: 2.6em;
+    margin-bottom: 30px;
+    letter-spacing: 2px;
+    font-weight: 400;
+  }
+
+  h2 {
+    color: #f5f5f5;
+    font-size: 1.4em;
+    margin-bottom: 15px;
+    font-weight: 400;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .card { 
+    background: linear-gradient(145deg, #2a2a2a, #1f1f1f);
+    padding: 25px;
+    margin: 20px auto;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    max-width: 900px;
+    border: 1px solid #3a3a3a;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  }
+
+  .sensor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 10px;
+  }
+
+  .sensor-item {
+    background: #1a1a1a;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #3a3a3a;
+    transition: all 0.3s ease;
+  }
+
+  .sensor-item:hover {
+    background: #242424;
+    border-color: #4a4a4a;
+  }
+
+  .sensor-label {
+    font-size: 0.9em;
+    color: #999;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .sensor-value {
+    font-size: 1.8em;
+    font-weight: 600;
+    color: #f5f5f5;
+  }
+
+  .buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .buttons button { 
+    padding: 14px 28px;
+    font-size: 16px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    color: #f5f5f5;
+    letter-spacing: 0.5px;
+  }
+
+  .buttons button:nth-child(1) {
+    background: #00a8cc;
+  }
+
+  .buttons button:nth-child(1):hover {
+    background: #00d2ff;
+  }
+
+  .buttons button:nth-child(2) {
+    background: #ee5a52;
+  }
+
+  .buttons button:nth-child(2):hover {
+    background: #ff6b6b;
+  }
+
+  .buttons button:nth-child(3) {
+    background: #3bb5ad;
+  }
+
+  .buttons button:nth-child(3):hover {
+    background: #4ecdc4;
+  }
+
+  .buttons button:nth-child(4) {
+    background: #8b7fe6;
+  }
+
+  .buttons button:nth-child(4):hover {
+    background: #a29bfe;
+  }
+
+  .buttons button:active {
+    transform: scale(0.95);
+  }
+
+  .toggle-btn {
+    background: #3a3a3a;
+    color: #f5f5f5;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid #4a4a4a;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+  }
+
+  .toggle-btn:hover {
+    background: #4a4a4a;
+  }
+
+  #history { 
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 20px;
+    border-radius: 8px;
+  }
+
+  #history::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  #history::-webkit-scrollbar-track {
+    background: #1a1a1a;
+    border-radius: 8px;
+  }
+
+  #history::-webkit-scrollbar-thumb {
+    background: #4a4a4a;
+    border-radius: 8px;
+  }
+
+  #history::-webkit-scrollbar-thumb:hover {
+    background: #5a5a5a;
+  }
+
+  table { 
+    width: 100%;
+    border-collapse: collapse;
+    background: #1a1a1a;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  th {
+    background: #2a2a2a;
+    color: #f5f5f5;
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.85em;
+    letter-spacing: 1px;
+  }
+
+  th, td { 
+    padding: 12px;
+    text-align: center;
+    border-bottom: 1px solid #2a2a2a;
+  }
+
+  td {
+    color: #c0c0c0;
+  }
+
+  tr:hover {
+    background: #242424;
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: 500;
+  }
+
+  .status-on {
+    background: rgba(46, 204, 113, 0.2);
+    color: #2ecc71;
+    border: 1px solid #2ecc71;
+  }
+
+  .status-off {
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+    border: 1px solid #e74c3c;
+  }
+
+  @media (max-width: 768px) {
+    h1 {
+      font-size: 2em;
+    }
+
+    .sensor-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .buttons {
+      flex-direction: column;
+    }
+
+    .buttons button {
+      width: 100%;
+    }
+  }
+</style>
+</head>
+<body>
+
+<h1>Sunya</h1>
+
+<div class="card">
+  <h2>📊 Live Sensor Data</h2>
+  <div class="sensor-grid">
+    <div class="sensor-item">
+      <div class="sensor-label">Temperature</div>
+      <div class="sensor-value" id="temperature">--</div>
+      <div style="color: #999; font-size: 0.9em; margin-top: 5px;">°C</div>
+    </div>
+    <div class="sensor-item">
+      <div class="sensor-label">Humidity</div>
+      <div class="sensor-value" id="humidity">--</div>
+      <div style="color: #999; font-size: 0.9em; margin-top: 5px;">%</div>
+    </div>
+    <div class="sensor-item">
+      <div class="sensor-label">Soil</div>
+      <div class="sensor-value" id="soil">--</div>
+    </div>
+    <div class="sensor-item">
+      <div class="sensor-label">Pump Status</div>
+      <div class="sensor-value" id="pump">--</div>
+    </div>
+    <div class="sensor-item">
+      <div class="sensor-label">Mode</div>
+      <div class="sensor-value" id="mode">--</div>
+    </div>
+  </div>
+</div>
+
+<div class="card buttons">
+  <button onclick="sendCommand('ON')">Pump ON</button>
+  <button onclick="sendCommand('OFF')">Pump OFF</button>
+  <button onclick="sendCommand('AUTO')">Auto Mode</button>
+  <button onclick="clearHistory()">Clear History</button>
+</div>
+
+<div class="card">
+  <h2>
+    <span>📝 History</span>
+    <button class="toggle-btn" onclick="toggleHistory()">View Details</button>
+  </h2>
+  <div id="history" style="display:none;">
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Temp</th>
+          <th>Humidity</th>
+          <th>Soil</th>
+          <th>Pump</th>
+          <th>Mode</th>
+        </tr>
+      </thead>
+      <tbody id="historyTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script>
+  // ---------------- MQTT CONFIG ----------------
+  const broker = "wss://8cede7c44b9449ae94c7432645c929b3.s1.eu.hivemq.cloud:8884/mqtt";
+  const clientId = "ESP32WebClient_" + Math.floor(Math.random() * 1000);
+  const username = "SupsDada";
+  const password = "Sups!12_88";
+  const pubTopic = "esp32/control";
+  const subTopic = "esp32/sensordata";
+
+  let client = mqtt.connect(broker, { clientId, username, password, clean: true, reconnectPeriod: 2000 });
+
+  let history = [];
+
+  client.on('connect', function () {
+    console.log('Connected to HiveMQ WebSocket!');
+    client.subscribe(subTopic, function(err) {
+      if(!err) console.log('Subscribed to ' + subTopic);
+    });
+  });
+
+  client.on('message', function (topic, message) {
+    if(topic === subTopic){
+      const data = JSON.parse(message.toString());
+      // Update live data
+      document.getElementById('temperature').innerText = data.temperature;
+      document.getElementById('humidity').innerText = data.humidity;
+      document.getElementById('soil').innerText = data.soil;
+      document.getElementById('pump').innerText = data.pump ? "ON" : "OFF";
+      document.getElementById('mode').innerText = data.mode;
+
+      // Add to history
+      const now = new Date().toLocaleTimeString();
+      history.unshift({time: now, ...data});
+      if(history.length > 200) history.pop(); // max 200 records
+      updateHistoryTable();
+    }
+  });
+
+  function sendCommand(cmd){
+    client.publish(pubTopic, cmd);
+  }
+
+  function toggleHistory(){
+    const histDiv = document.getElementById('history');
+    histDiv.style.display = histDiv.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function clearHistory(){
+    history = [];
+    client.publish(pubTopic, "CLEAR");
+    updateHistoryTable();
+  }
+
+  function updateHistoryTable(){
+    const tbody = document.getElementById('historyTable');
+    tbody.innerHTML = '';
+    history.forEach(record => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${record.time}</td>
+                      <td>${record.temperature}</td>
+                      <td>${record.humidity}</td>
+                      <td>${record.soil}</td>
+                      <td>${record.pump ? "ON" : "OFF"}</td>
+                      <td>${record.mode}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+</script>
+
+</body>
+</html>
